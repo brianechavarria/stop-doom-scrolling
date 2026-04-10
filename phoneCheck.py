@@ -1,5 +1,8 @@
 import cv2
-from engine.object_detection import ObjectDetection
+from ultralytics import YOLO
+import numpy as np
+import fiftyone as fo
+import fiftyone.zoo as foz
 
 # Open the default camera
 cam = cv2.VideoCapture(0)
@@ -13,7 +16,8 @@ fourcc = cv2.VideoWriter_fourcc(*'mp4v')
 out = cv2.VideoWriter('output.mp4', fourcc, 20.0, (frame_width, frame_height))
 
 # Load object detection model
-od = ObjectDetection()
+model = YOLO("yolo26n.pt")
+
 
 while True:
     ret, frame = cam.read()
@@ -22,7 +26,21 @@ while True:
     out.write(frame)
 
     # Detect objects in the frame
-    bounding_boxes, class_ids, scores = od.detect(frame)
+    results = model(frame)
+    # Parse the results
+    boxes = results[0].boxes.xyxy.cpu().numpy()
+    confs = results[0].boxes.conf.cpu().numpy()
+    labels = results[0].boxes.cls.cpu().numpy().astype(int)
+
+    # Draw bounding boxes and labels on the image
+    for box, conf, label in zip(boxes, confs, labels):
+        if conf >= 0.2:  # Confidence threshold
+            x1, y1, x2, y2 = map(int, box)
+            label_name = model.names[label]
+            cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
+            cv2.putText(frame, f'{label_name} {conf:.2f}', (x1, y1 - 10), 
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.9, (255, 0, 0), 2)
+    
 
     # Display the captured frame
     cv2.imshow('Camera', frame)
