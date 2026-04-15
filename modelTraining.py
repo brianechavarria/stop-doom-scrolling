@@ -27,3 +27,10 @@ validation = foz.load_zoo_dataset(
 )
 
 # Train model
+results = model.train(
+    data = train,
+    imgsz = 640,
+    epochs = 10,
+    batch = 8,
+    name = 'yolo26n_custom'
+)
